@@ -1,0 +1,166 @@
+# PAI Security Patterns - USER CUSTOMIZATION
+# Extends the system example with supply chain security patterns
+# Used by SecurityValidator.hook.ts
+# Phase 1 of SSCS Project Plan
+---
+version: "1.1"
+last_updated: "2026-02-12"
+
+philosophy:
+  mode: safe_functional
+  principle: "Meaningful protection without friction that drives people to disable security"
+
+# ========================================
+# BASH COMMAND PATTERNS
+# ========================================
+bash:
+  # BLOCKED - Catastrophic/irreversible (exit 2)
+  blocked:
+    # Filesystem destruction
+    - pattern: "rm -rf /"
+      reason: "Filesystem destruction"
+    - pattern: "rm -rf ~"
+      reason: "Home directory destruction"
+    - pattern: "sudo rm -rf /"
+      reason: "Filesystem destruction with sudo"
+    - pattern: "sudo rm -rf ~"
+      reason: "Home directory destruction with sudo"
+
+    # Disk operations
+    - pattern: "diskutil eraseDisk"
+      reason: "Disk destruction"
+    - pattern: "diskutil zeroDisk"
+      reason: "Disk destruction"
+    - pattern: "diskutil partitionDisk"
+      reason: "Disk partitioning"
+    - pattern: "diskutil apfs deleteContainer"
+      reason: "APFS container deletion"
+    - pattern: "diskutil apfs eraseVolume"
+      reason: "Volume destruction"
+    - pattern: "dd if=/dev/zero"
+      reason: "Disk overwrite"
+    - pattern: "mkfs"
+      reason: "Filesystem format"
+
+    # Repository operations
+    - pattern: "gh repo delete"
+      reason: "Repository deletion"
+    - pattern: "gh repo edit --visibility public"
+      reason: "Repository exposure"
+
+    # ── Supply Chain Security: BLOCKED ──
+    - pattern: "npm publish.*--no-verify"
+      reason: "Publishing without verification bypasses security checks"
+    - pattern: "pip install.*--trusted-host"
+      reason: "Installing from untrusted host bypasses TLS verification"
+
+  # CONFIRM - Dangerous but sometimes legitimate (exit 0 + JSON prompt)
+  confirm:
+    # Git operations
+    - pattern: "git push --force"
+      reason: "Force push can lose commits"
+    - pattern: "git push -f"
+      reason: "Force push can lose commits"
+    - pattern: "git push origin --force"
+      reason: "Force push can lose commits"
+    - pattern: "git push origin -f"
+      reason: "Force push can lose commits"
+    - pattern: "git reset --hard"
+      reason: "Loses uncommitted changes"
+
+    # Cloud - AWS
+    - pattern: "aws s3 rm.*--recursive"
+      reason: "Bulk S3 deletion"
+    - pattern: "aws ec2 terminate"
+      reason: "EC2 instance termination"
+    - pattern: "aws rds delete"
+      reason: "RDS deletion"
+
+    # Cloud - GCP
+    - pattern: "gcloud.*delete"
+      reason: "GCP resource deletion"
+
+    # Infrastructure as Code
+    - pattern: "terraform destroy"
+      reason: "Infrastructure destruction"
+    - pattern: "terraform apply.*-auto-approve"
+      reason: "Auto-approve bypasses review"
+    - pattern: "pulumi destroy"
+      reason: "Infrastructure destruction"
+
+    # Containers
+    - pattern: "docker system prune"
+      reason: "Container/image cleanup"
+    - pattern: "docker volume rm"
+      reason: "Volume data deletion"
+    - pattern: "kubectl delete namespace"
+      reason: "Namespace deletion"
+
+    # Databases
+    - pattern: "DELETE FROM.*WHERE"
+      reason: "Database deletion (confirm scope)"
+    - pattern: "DROP DATABASE"
+      reason: "Database destruction"
+    - pattern: "DROP TABLE"
+      reason: "Table destruction"
+    - pattern: "TRUNCATE"
+      reason: "Table data destruction"
+
+    # ── Supply Chain Security: CONFIRM ──
+    - pattern: "npm publish"
+      reason: "Publishing package to npm registry"
+    - pattern: "cargo publish"
+      reason: "Publishing crate to crates.io"
+    - pattern: "docker push"
+      reason: "Pushing container image to registry"
+    - pattern: "twine upload"
+      reason: "Publishing Python package to PyPI"
+    - pattern: "gem push"
+      reason: "Publishing Ruby gem"
+
+  # ALERT - Suspicious but allowed (log only, no block)
+  alert:
+    - pattern: "curl.*\\|.*sh"
+      reason: "Piping curl to shell"
+    - pattern: "curl.*\\|.*bash"
+      reason: "Piping curl to bash"
+    - pattern: "wget.*\\|.*sh"
+      reason: "Piping wget to shell"
+    - pattern: "wget.*\\|.*bash"
+      reason: "Piping wget to bash"
+
+    # ── Supply Chain Security: ALERT ──
+    - pattern: "npm install --ignore-scripts"
+      reason: "Installing npm packages with scripts disabled may indicate bypassing security"
+    - pattern: "pip install --no-deps"
+      reason: "Installing without dependencies may miss transitive vulnerabilities"
+
+# ========================================
+# PATH PROTECTION
+# ========================================
+paths:
+  zeroAccess:
+    - "~/.ssh/id_*"
+    - "~/.ssh/*.pem"
+    - "~/.aws/credentials"
+    - "~/.gnupg/private*"
+    - "**/credentials.json"
+    - "**/service-account*.json"
+
+  readOnly:
+    - "/etc/**"
+
+  confirmWrite:
+    - "**/.env"
+    - "**/.env.*"
+    - "~/.ssh/*"
+
+  noDelete:
+    - ".git/**"
+    - "LICENSE*"
+    - "README.md"
+
+# ========================================
+# SPECIAL PROJECT RULES
+# ========================================
+projects: {}
